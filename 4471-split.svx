@@ -28,6 +28,12 @@ after it ships, and each now has its own ticket.
 
 <ProblemTable ticket={4471} />
 
+The tickets:
+
+- `parser`: [WraithNath/mega-what-it-shows#1](https://github.com/WraithNath/mega-what-it-shows/issues/1)
+- `hint`: [WraithNath/mega-what-it-shows#2](https://github.com/WraithNath/mega-what-it-shows/issues/2)
+- `one-day`: [WraithNath/mega-what-it-shows#3](https://github.com/WraithNath/mega-what-it-shows/issues/3)
+
 ## How each report was placed
 
 1. **`hint`**: the report came in through the booking form, and the tenant runs `booking-v3`.

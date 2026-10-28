@@ -1,4 +1,4 @@
-﻿# kb â€” the support knowledge base
+﻿# kb — the support knowledge base
 
 **kb** = knowledge base. What the support desk knows about how our products break, written
 down where the code can keep it honest.
@@ -22,7 +22,7 @@ src/lib/data/       exports from the ticket system
 
 ## Conventions
 
-- Words in the page, logic in `src/lib` (imported as `#lib/â€¦`). A number that can be computed belongs in a component.
+- Words in the page, logic in `src/lib` (imported as `#lib/…`). A number that can be computed belongs in a component.
 - Every page starts with frontmatter: `title`, `owner`, `status`, `reviewed`.
 - A decision is never edited after it is accepted. A new record replaces it.
 - A page you add is signed: its frontmatter carries your `signature` and it ends with `<RenderStamp {signature} />`, so the desk knows who wrote it.
@@ -40,4 +40,4 @@ Support desk. Decision records: whoever signed them.
 
 ---
 
-Exported 2026-10-04 from the `support` repo, `apps/kb/` â†’ `src/`.
+Exported 2026-10-04 from the `support` repo, `apps/kb/` → `src/`.

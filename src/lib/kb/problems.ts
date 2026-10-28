@@ -1,47 +1,30 @@
-// What #4471 holds once it is read by cause, not by subject. Pages explain it; this file is what runs.
-import { causeOf, uniqueById, type Report, type Tenant } from '#lib/kb/causes';
+// What #4471 holds, one ticket per problem. Counts come from the desk's own view (causes.ts), so they
+// match CauseTable: a report is counted under the cause it is filed by, and the desk's one-day moves
+// (desk-notes.json) are footnoted under it.
+import { groupByCause, readAs, uniqueById, type Report, type Tenant } from '#lib/kb/causes';
 
-// `parser` and `hint` swap the day and the month (causes.ts). A one-day move is neither: the date
-// keeps its day and month and lands a day early or late. The desk reads those from the body
-// (desk-notes.json); causes.ts would file them under their tenant's cause.
 export type Problem = 'parser' | 'hint' | 'one-day';
 
-export type ProblemInfo = { title: string; what: string; issue: number };
+export type ProblemInfo = { title: string; issue: number; state: string };
 
 // One ticket per problem, in the repo that tracks the split.
 export const ISSUE_REPO = 'https://github.com/WraithNath/mega-what-it-shows/issues';
 
+// State after the engineering update on #4471 (closed 5 Oct).
 export const PROBLEMS: Record<Problem, ProblemInfo> = {
-  parser: {
-    title: 'Shared parser reads day-first dates month first',
-    what: 'A day-first tenant books 7 April; the invite goes out for 4 July.',
-    issue: 1,
-  },
-  hint: {
-    title: 'booking-v3 prints MM/DD/YYYY under the date for day-first tenants',
-    what: 'People type what the hint says; the form reads it the tenant’s way.',
-    issue: 2,
-  },
-  'one-day': {
-    title: 'Invites land one day off',
-    what: 'Day and month are right; the day is not. Seen across time zones.',
-    issue: 3,
-  },
+  parser: { title: 'Shared parser reads day-first dates month first', issue: 1, state: 'fixed' },
+  hint: { title: 'booking-v3 prints MM/DD/YYYY under the date for day-first tenants', issue: 2, state: "won't fix: booking-v3 retired" },
+  'one-day': { title: 'Invites land one day off', issue: 3, state: 'open' },
 };
 
-export function problemOf(r: Report, t: Tenant | undefined, oneDayMove: readonly string[]): Problem | null {
-  return oneDayMove.includes(r.id) ? 'one-day' : causeOf(r, t);
-}
-
-export type ProblemGroup = {
+export type ProblemRow = {
   problem: Problem | 'unplaced';
-  reports: Report[];
-  tenants: string[];
-  channels: Record<string, number>;
+  reports: number;
+  tenants: number;
   firstSeen: string;
   lastSeen: string;
-  // How many intake tagged as something other than this problem.
-  mistagged: number;
+  // For one-day: the cause these reports are counted under.
+  countedUnder?: string;
 };
 
 export function splitTicket(
@@ -49,24 +32,29 @@ export function splitTicket(
   ticket: number,
   tenantOf: (r: Report) => Tenant | undefined,
   oneDayMove: readonly string[],
-): ProblemGroup[] {
-  const by = new Map<ProblemGroup['problem'], Report[]>();
-  for (const r of uniqueById(all).filter((r) => r.mergedInto === ticket)) {
-    const p = problemOf(r, tenantOf(r), oneDayMove) ?? 'unplaced';
-    by.set(p, [...(by.get(p) ?? []), r]);
+): { total: number; rows: ProblemRow[] } {
+  const merged = uniqueById(all).filter((r) => r.mergedInto === ticket);
+  const groups = groupByCause(merged, tenantOf);
+  const rows: ProblemRow[] = groups.map((g) => ({
+    problem: g.cause,
+    reports: g.reports.length,
+    tenants: g.tenants,
+    firstSeen: g.firstSeen,
+    lastSeen: g.lastSeen,
+  }));
+  for (const g of groups) {
+    const n = readAs(g, oneDayMove);
+    if (!n) continue;
+    const rs = g.reports.filter((r) => oneDayMove.includes(r.id));
+    const days = rs.map((r) => r.receivedAt.slice(0, 10)).sort();
+    rows.push({
+      problem: 'one-day',
+      reports: n,
+      tenants: new Set(rs.map((r) => r.tenant)).size,
+      firstSeen: days[0],
+      lastSeen: days[days.length - 1],
+      countedUnder: g.cause,
+    });
   }
-  return [...by.entries()]
-    .map(([problem, rs]) => {
-      const days = rs.map((r) => r.receivedAt.slice(0, 10)).sort();
-      return {
-        problem,
-        reports: rs,
-        tenants: [...new Set(rs.map((r) => r.tenant))].sort(),
-        channels: rs.reduce<Record<string, number>>((n, r) => ({ ...n, [r.channel]: (n[r.channel] ?? 0) + 1 }), {}),
-        firstSeen: days[0],
-        lastSeen: days[days.length - 1],
-        mistagged: rs.filter((r) => r.meta.intakeTag !== problem).length,
-      };
-    })
-    .sort((a, b) => b.reports.length - a.reports.length);
+  return { total: merged.length, rows };
 }

@@ -9,56 +9,47 @@ signature: WraithNath
 
 <script>
   import ProblemTable from '#lib/kb/ProblemTable.svelte';
-  import CauseTable from '#lib/kb/CauseTable.svelte';
   import Callout from '#lib/kb/Callout.svelte';
   import RenderStamp from '#lib/kb/RenderStamp.svelte';
 </script>
 
-[#4471](/kb/incidents/4471) is marked known: one issue, one fix queued. It holds more than one bug.
-The desk merged on subject line ([decision 0001](/kb/decisions/0001-dedupe-by-subject)), and every
-report about a date has a subject that looks like every other. Read by tenant, channel and body,
-the reports split three ways.
+[#4471](/kb/incidents/4471) was merged on subject line ([decision 0001](/kb/decisions/0001-dedupe-by-subject))
+and marked known: one issue, one fix. Read by cause, it held three problems. Engineering closed
+#4471 on 5 October: the parser is fixed and the `booking-v3` form is retired. The one-day moves
+are not covered by either.
 
 <Callout kind="warn">
-The fix queued for #4471 fixes the shared parser only. The other two problems keep coming in
-after it ships, and each now has its own ticket.
+#4471 is closed, but one problem is still open: invites that land one day off (#3).
 </Callout>
 
 ## The split
+
+Counted the way the desk counts (`CauseTable`): each report under the cause it is filed by.
 
 <ProblemTable ticket={4471} />
 
 The tickets:
 
-- `parser`: [WraithNath/mega-what-it-shows#1](https://github.com/WraithNath/mega-what-it-shows/issues/1)
-- `hint`: [WraithNath/mega-what-it-shows#2](https://github.com/WraithNath/mega-what-it-shows/issues/2)
-- `one-day`: [WraithNath/mega-what-it-shows#3](https://github.com/WraithNath/mega-what-it-shows/issues/3)
+- `parser`: [WraithNath/mega-what-it-shows#1](https://github.com/WraithNath/mega-what-it-shows/issues/1), fixed (`fix(dates): parse dd/mm for eu locales`)
+- `hint`: [WraithNath/mega-what-it-shows#2](https://github.com/WraithNath/mega-what-it-shows/issues/2), won't fix: `booking-v3` form retired
+- `one-day`: [WraithNath/mega-what-it-shows#3](https://github.com/WraithNath/mega-what-it-shows/issues/3), open
 
-## How each report was placed
+## What each problem is
 
-1. **`hint`**: the report came in through the booking form, and the tenant runs `booking-v3`.
-   That form prints `MM/DD/YYYY` under the date, so day-first people type the month first, and the
-   form then reads it day first. The parser fix does not touch this: the hint has to change.
-2. **`one-day`**: the desk read the body as a one-day move (`desk-notes.json`). Day and month are
-   right; the date is a day early or late, and in one report differs between Lisbon and Toronto.
-   A swap can't do that. It is a time-zone or date-boundary bug.
-3. **`parser`**: everything else from a day-first tenant. The shared parser reads the date month
-   first, so 7 April comes out as 4 July. This is the bug #4471 describes.
+1. **`parser`**: the shared parser read dates month first, and every tenant in #4471 writes the
+   day first, so 7 April came out as 4 July.
+2. **`hint`**: `booking-v3` printed `MM/DD/YYYY` under the date. Day-first people typed the month
+   first as told, and the form read it day first. Only form reports from `booking-v3` tenants.
+3. **`one-day`**: the desk read these as one-day moves (`desk-notes.json`). Day and month are
+   right, but the date is a day off, and in one report it differs between Lisbon and Toronto. A swap
+   can't do that, so the parser fix doesn't touch it. Likely a time-zone or date-boundary bug.
 
 Intake's tag is a guess from the reporter's browser, so it isn't used here. The tenant directory
 decides.
 
-## What the old page showed
-
-The table on the #4471 page, for comparison. It finds `hint` but files the one-day moves under
-`parser`, footnoted, and leaves `hint` without a ticket.
-
-<CauseTable ticket={4471} />
-
 ## For the desk
 
 - Before you merge a report into a big ticket, check it has the same cause, not the same subject.
-- A one-day move isn't a swap. Don't merge it into #4471.
-- New `booking-v3` form reports from day-first tenants go to the `hint` ticket.
+- A one-day move isn't a swap. New ones go to #3, not to a parser ticket.
 
 <RenderStamp {signature} />

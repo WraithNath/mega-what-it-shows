@@ -7,38 +7,36 @@
 
   let { ticket }: { ticket: number } = $props();
 
-  const groups = $derived(splitTicket(reports as Report[], ticket, tenantOf, notes.oneDayMove));
-  const total = $derived(groups.reduce((n, g) => n + g.reports.length, 0));
-  const channels = (c: Record<string, number>) =>
-    Object.entries(c)
-      .sort((a, b) => b[1] - a[1])
-      .map(([k, n]) => `${k} ${n}`)
-      .join(' · ');
+  const split = $derived(splitTicket(reports as Report[], ticket, tenantOf, notes.oneDayMove));
 </script>
 
 <p class="sum">
-  <strong>{total}</strong> reports in #{ticket} · <strong>{groups.length}</strong>
-  {groups.length === 1 ? 'problem' : 'problems'}
+  <strong>{split.total}</strong> reports in #{ticket} · <strong>{split.rows.length}</strong>
+  {split.rows.length === 1 ? 'problem' : 'problems'}
 </p>
 
 <table>
   <thead>
-    <tr><th>problem</th><th>reports</th><th>tenants</th><th>channels</th><th>seen</th><th>ticket</th></tr>
+    <tr><th>problem</th><th>reports</th><th>tenants</th><th>seen</th><th>ticket</th><th>state</th></tr>
   </thead>
   <tbody>
-    {#each groups as g (g.problem)}
-      {@const info = g.problem === 'unplaced' ? null : PROBLEMS[g.problem]}
+    {#each split.rows as row (row.problem)}
+      {@const info = row.problem === 'unplaced' ? null : PROBLEMS[row.problem]}
       <tr>
-        <td><code>{g.problem}</code>{#if info}<br /><span class="what">{info.title}</span>{/if}</td>
-        <td>{g.reports.length}</td>
-        <td>{g.tenants.length}</td>
-        <td class="muted">{channels(g.channels)}</td>
-        <td class="muted">{g.firstSeen} → {g.lastSeen}</td>
+        <td><code>{row.problem}</code>{#if info}<br /><span class="what">{info.title}</span>{/if}</td>
+        <td>{row.reports}{#if row.countedUnder}*{/if}</td>
+        <td>{row.tenants}</td>
+        <td class="muted">{row.firstSeen} → {row.lastSeen}</td>
         <td>{#if info}<a href="{ISSUE_REPO}/{info.issue}">#{info.issue}</a>{:else}none{/if}</td>
+        <td class="muted">{info?.state ?? ''}</td>
       </tr>
     {/each}
   </tbody>
 </table>
+
+{#each split.rows.filter((r) => r.countedUnder) as row (row.problem)}
+  <p class="muted">* {row.reports} reports read as a one-day move; counted under <code>{row.countedUnder}</code>, where the desk files them.</p>
+{/each}
 
 <style>
   .sum { font-size: 1.1rem; }
